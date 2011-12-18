@@ -542,7 +542,7 @@ public class RingoConfiguration {
         URL url = urlFromClasspath(canonicalPath, loader);
         if (url != null) {
             String protocol = url.getProtocol();
-            if ("jar".equals(protocol) || "zip".equals(protocol)) {
+            if ("jar".equals(protocol) || "zip".equals(protocol) || "wsjar".equals(protocol)) {
                 Repository repo = toZipRepository(url);
                 return repo.getResource(path);
             } else if ("file".equals(protocol)) {
@@ -559,7 +559,7 @@ public class RingoConfiguration {
         URL url = urlFromClasspath(canonicalPath, loader);
         if (url != null) {
             String protocol = url.getProtocol();
-            if ("jar".equals(protocol) || "zip".equals(protocol)) {
+            if ("jar".equals(protocol) || "zip".equals(protocol) || "wsjar".equals(protocol)) {
                 Repository repo = toZipRepository(url);
                 return repo.getChildRepository(path);
             } else if ("file".equals(protocol)) {
