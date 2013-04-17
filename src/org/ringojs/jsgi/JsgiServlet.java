@@ -29,6 +29,8 @@ import org.ringojs.engine.RhinoEngine;
 import org.ringojs.util.StringUtils;
 import org.mozilla.javascript.Callable;
 
+import com.emergya.persistenceGeo.utils.ProxyUtils;
+
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -41,6 +43,109 @@ import java.util.Arrays;
 import java.util.List;
 
 public class JsgiServlet extends HttpServlet {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	
+	private String proxyUrl;
+	private int proxyPort;
+	private String proxyUser;
+	private String proxyPassword;
+	private boolean proxyOn;
+	private String [] noProxied = null; //Default null
+	
+	/**
+	 * Environment parameters to load
+	 */
+	public static class EnvironmentParameters{
+		/**
+		 * Geoserver url runtime parameter
+		 */
+		public static String GEOSERVER_URL = "app.proxy.geoserver";
+		/**
+		 * Geoserver user runtime parameter
+		 */
+		public static String GEOSERVER_USER = "app.proxy.geoserver.username";
+		/**
+		 * Geoserver password runtime parameter
+		 */
+		public static String GEOSERVER_PASSWORD = "app.proxy.geoserver.password";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String GEOSERVER_PORT = "app.proxy.geoserver.port";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String NO_PROXIED = "app.proxy.geoserver.skiped";
+	}
+	
+    /**
+     * Servlet init. Reads proxy configuration
+     */
+	public void init() throws ServletException {
+		super.init();
+		this.proxyUrl = System.getProperty(EnvironmentParameters.GEOSERVER_URL);
+		this.proxyUser = System.getProperty(EnvironmentParameters.GEOSERVER_USER);
+		this.proxyPassword = System.getProperty(EnvironmentParameters.GEOSERVER_PASSWORD);
+		this.proxyPort = System.getProperty(EnvironmentParameters.GEOSERVER_PORT) != null ? Integer.decode(System.getProperty(EnvironmentParameters.GEOSERVER_PORT)) : 80; // default 80
+		if(this.proxyUrl != null){
+			this.proxyOn = true;
+		}else{
+			this.proxyOn = false;
+		}
+		String noProxiedString = System.getProperty(EnvironmentParameters.NO_PROXIED);
+		if(noProxiedString != null){
+			this.noProxied = noProxiedString.split(",");
+		}
+	}
+
+	/**
+     * Service a request.
+     */
+    protected void service(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+    	
+    	String urlParameter = request.getParameter("url");
+    	
+    	if(isProxyable(urlParameter)){
+    		//Do proxy
+    		//System.out.println("Do proxy "+ urlParameter);
+    		ProxyUtils proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null);
+    		proxy.process(request, response);
+    	}else{
+    		//System.out.println("Do not proxy "+ urlParameter);
+    		serviceOld(request, response);
+    	}
+    }
+
+    /**
+     * Compare with proxy configuration
+     * 
+     * @param urlParameter
+     * 
+     * @return true if urlParameter is proxyable or false otherwise
+     */
+	private boolean isProxyable(String urlParameter) {
+		
+		String anotherUrl = (proxyUrl.split("/geoserver")[0] + ":" + proxyPort + "/geoserver");
+//		System.out.println("urlParameter --> " + urlParameter);
+//		System.out.println("proxyUrl --> " + proxyUrl);
+//		System.out.println("anotherUrl --> " + anotherUrl);
+		boolean isProxyable = urlParameter != null 
+				&& (urlParameter.startsWith(proxyUrl)
+						|| urlParameter.
+							startsWith(proxyUrl.replaceAll(":", "%3A").replaceAll("/", "%2F"))
+						|| urlParameter.
+							startsWith(anotherUrl)
+						|| urlParameter.
+							startsWith(anotherUrl.replaceAll(":", "%3A").replaceAll("/", "%2F")));
+		//System.out.println(urlParameter + (isProxyable ? "  is proxyable" : " is not proxyable"));
+		return isProxyable;
+	}
 
     String module;
     Object function;
@@ -119,9 +224,9 @@ public class JsgiServlet extends HttpServlet {
         }
     }
 
-    @Override
-    protected void service(HttpServletRequest request, HttpServletResponse response)
+    protected void serviceOld(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+    	
         try {
             if (hasContinuation && ContinuationSupport
                     .getContinuation(request).isExpired()) {
