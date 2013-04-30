@@ -46,6 +46,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
@@ -156,18 +157,26 @@ public class ProxyUtils {
 
 			String requestURL = manageUrl(urlParameter, request, response);
 
-			if (request.getMethod().toLowerCase().equals("put")) {
-				put(requestURL, request, os);
-			} else if (request.getMethod().toLowerCase().equals("post")) {
-				post(requestURL, request, os);
-			} else if (request.getMethod().toLowerCase().equals("get")) {
-				get(requestURL, request, os);
-			} else {
+//			if (request.getMethod().toLowerCase().equals("put")) {
+//				put(requestURL, request, os);
+//			} else if (request.getMethod().toLowerCase().equals("post")) {
+//				post(requestURL, request, os);
+////			} else if (request.getMethod().toLowerCase().equals("get")) {
+////				get(requestURL, request, os);
+//			} else {
 
 				// Create and execute method
 				HttpClient client = getHttpClient(requestURL);
 				HttpMethod method = getMethod(request, response, requestURL);
-				client.executeMethod(method);
+				
+				// copy status
+				int status = client.executeMethod(method);
+				response.setStatus(status);
+				
+				// copy headers
+				for (Header header: method.getResponseHeaders()){
+					response.setHeader(header.getName(), header.getValue());
+				}
 
 				// Copy buffer
 				InputStream inputStreamProxyResponse = method
@@ -179,7 +188,8 @@ public class ProxyUtils {
 				}
 				inputStreamProxyResponse.close();
 				// EoF copy buffer
-			}
+				
+//			}
 
 		} catch (Exception e) {
 			// log.error("getInputStream() failed", e);
