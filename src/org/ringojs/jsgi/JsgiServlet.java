@@ -117,13 +117,17 @@ public class JsgiServlet extends HttpServlet {
     	
     	String urlParameter = request.getParameter("url");
     	
-    	if(isProxyable(urlParameter)){
+    	if(urlParameter != null){
     		//Do proxy
-    		System.out.println("Do proxy "+ urlParameter);
-    		ProxyUtils proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null);
+    		//System.out.println("Do proxy "+ urlParameter);
+    		ProxyUtils proxy;
+    		if(isProxyable(urlParameter)){
+    			proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null);
+    		}else{
+    			proxy = new ProxyUtils(proxyUrl, proxyPort, null, null, false, noProxied, null);
+    		}
     		proxy.process(request, response);
     	}else{
-    		System.out.println("Do not proxy "+ urlParameter);
     		serviceOld(request, response);
     	}
     }
