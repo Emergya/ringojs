@@ -57,8 +57,6 @@ import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * JsgiServlet extension to do direct proxy
@@ -70,13 +68,13 @@ public class ProxyUtils {
 
 	private Map<String, String> authorizedUrls;
 
-	private String proxyUrl;
-	private int proxyPort;
-	private String proxyUser;
-	private String proxyPassword;
-	private boolean proxyOn;
-	private String[] noProxied;
-	private String[] fullAuthentication;
+	protected String proxyUrl;
+	protected int proxyPort;
+	protected String proxyUser;
+	protected String proxyPassword;
+	protected boolean proxyOn;
+	protected String[] noProxied;
+	protected String[] fullAuthentication;
 
 	/**
 	 * Constructor of ProxyPass
@@ -157,39 +155,29 @@ public class ProxyUtils {
 
 			String requestURL = manageUrl(urlParameter, request, response);
 
-//			if (request.getMethod().toLowerCase().equals("put")) {
-//				put(requestURL, request, os);
-//			} else if (request.getMethod().toLowerCase().equals("post")) {
-//				post(requestURL, request, os);
-////			} else if (request.getMethod().toLowerCase().equals("get")) {
-////				get(requestURL, request, os);
-//			} else {
+			// Create and execute method
+			HttpClient client = getHttpClient(requestURL);
+			HttpMethod method = getMethod(request, response, requestURL);
+			
+			// copy status
+			int status = client.executeMethod(method);
+			response.setStatus(status);
+			
+			// copy headers
+			for (Header header: method.getResponseHeaders()){
+				response.setHeader(header.getName(), header.getValue());
+			}
 
-				// Create and execute method
-				HttpClient client = getHttpClient(requestURL);
-				HttpMethod method = getMethod(request, response, requestURL);
-				
-				// copy status
-				int status = client.executeMethod(method);
-				response.setStatus(status);
-				
-				// copy headers
-				for (Header header: method.getResponseHeaders()){
-					response.setHeader(header.getName(), header.getValue());
-				}
-
-				// Copy buffer
-				InputStream inputStreamProxyResponse = method
-						.getResponseBodyAsStream();
-				int read = 0;
-				byte[] bytes = new byte[1024];
-				while ((read = inputStreamProxyResponse.read(bytes)) != -1) {
-					os.write(bytes, 0, read);
-				}
-				inputStreamProxyResponse.close();
-				// EoF copy buffer
-				
-//			}
+			// Copy buffer
+			InputStream inputStreamProxyResponse = method
+					.getResponseBodyAsStream();
+			int read = 0;
+			byte[] bytes = new byte[1024];
+			while ((read = inputStreamProxyResponse.read(bytes)) != -1) {
+				os.write(bytes, 0, read);
+			}
+			inputStreamProxyResponse.close();
+			// EoF copy buffer
 
 		} catch (Exception e) {
 			// log.error("getInputStream() failed", e);
@@ -212,7 +200,7 @@ public class ProxyUtils {
 	 * 
 	 * @throws IOException
 	 */
-	private void put(String url, HttpServletRequest request, OutputStream os)
+	protected void put(String url, HttpServletRequest request, OutputStream os)
 			throws IOException {
 		StringWriter writer = new StringWriter();
 		Reader data = request.getReader();
@@ -243,7 +231,7 @@ public class ProxyUtils {
 	 * 
 	 * @throws IOException
 	 */
-	private void post(String url, HttpServletRequest request, OutputStream os)
+	protected void post(String url, HttpServletRequest request, OutputStream os)
 			throws IOException {
 		StringWriter writer = new StringWriter();
 		Reader data = request.getReader();
@@ -274,7 +262,7 @@ public class ProxyUtils {
 	 * 
 	 * @throws IOException
 	 */
-	private void get(String url, HttpServletRequest request, OutputStream os)
+	protected void get(String url, HttpServletRequest request, OutputStream os)
 			throws IOException {
 		String stringResponse = HTTPUtils.get(url, proxyUser, proxyPassword);
 		os.write(stringResponse.getBytes());
@@ -291,7 +279,7 @@ public class ProxyUtils {
 	 * 
 	 * @throws Exception
 	 */
-	private HttpMethod getMethod(HttpServletRequest request,
+	protected HttpMethod getMethod(HttpServletRequest request,
 			HttpServletResponse response, String requestURL) throws Exception {
 		HttpMethod method;
 		if (request.getMethod().toLowerCase().equals("get")) {
