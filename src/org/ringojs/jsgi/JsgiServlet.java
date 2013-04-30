@@ -92,6 +92,12 @@ public class JsgiServlet extends HttpServlet {
 		this.proxyUser = System.getProperty(EnvironmentParameters.GEOSERVER_USER);
 		this.proxyPassword = System.getProperty(EnvironmentParameters.GEOSERVER_PASSWORD);
 		this.proxyPort = System.getProperty(EnvironmentParameters.GEOSERVER_PORT) != null ? Integer.decode(System.getProperty(EnvironmentParameters.GEOSERVER_PORT)) : 80; // default 80
+
+        System.out.println("proxyUrl is "+ this.proxyUrl);
+        System.out.println("proxyUser is "+ this.proxyUser);
+        System.out.println("proxyPassword is "+ this.proxyPassword);
+        System.out.println("proxyPort is "+ this.proxyPort);
+
 		if(this.proxyUrl != null){
 			this.proxyOn = true;
 		}else{
@@ -122,7 +128,6 @@ public class JsgiServlet extends HttpServlet {
     		}
     		proxy.process(request, response);
     	}else{
-    		//System.out.println("Do not proxy "+ urlParameter);
     		serviceOld(request, response);
     	}
     }
