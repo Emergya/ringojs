@@ -57,6 +57,7 @@ public class JsgiServlet extends HttpServlet {
 	private boolean proxyOn;
 	private String [] noProxied = null; //Default null
 	private String [] fullAuthentication = null; //Default null
+	private String proxies = null; //Default null
 	
 	/**
 	 * Environment parameters to load
@@ -90,6 +91,10 @@ public class JsgiServlet extends HttpServlet {
 		 * Geoserver port runtime parameter
 		 */
 		public static String AUTHORIZED_URLS = "app.proxy.geoserver.authorizedUrls";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String CONFIG_PROXIES = "app.proxy.geoserver.proxies";
 	}
 	
     /**
@@ -103,6 +108,7 @@ public class JsgiServlet extends HttpServlet {
 		this.proxyPort = System.getProperty(EnvironmentParameters.GEOSERVER_PORT) != null ? Integer.decode(System.getProperty(EnvironmentParameters.GEOSERVER_PORT)) : 80; // default 80
 		this.noProxied = System.getProperty(EnvironmentParameters.NO_PROXIED) != null ? System.getProperty(EnvironmentParameters.NO_PROXIED).split(",") : null;
 		this.fullAuthentication = System.getProperty(EnvironmentParameters.FULL_AUTH) != null ? System.getProperty(EnvironmentParameters.FULL_AUTH).split(",") : null;
+		this.proxies = System.getProperty(EnvironmentParameters.CONFIG_PROXIES);
 
         System.out.println("proxyUrl is "+ this.proxyUrl);
         System.out.println("proxyUser is "+ this.proxyUser);
@@ -110,8 +116,9 @@ public class JsgiServlet extends HttpServlet {
         System.out.println("proxyPort is "+ this.proxyPort);
         System.out.println("noProxied is "+ this.noProxied);
         System.out.println("fullAuthentication is "+ this.fullAuthentication);
+        System.out.println("proxies are "+ this.proxies);
 
-		if(this.proxyUrl != null){
+		if(this.proxyUrl != null || this.proxies != null){
 			this.proxyOn = true;
 		}else{
 			this.proxyOn = false;
@@ -129,16 +136,31 @@ public class JsgiServlet extends HttpServlet {
     	if(urlParameter != null){
     		//Do proxy
     		//System.out.println("Do proxy "+ urlParameter);
-    		ProxyUtils proxy;
-    		if(isProxyable(urlParameter)){
-    			proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null, fullAuthentication);
-    		}else{
-    			proxy = new ProxyUtils(proxyUrl, proxyPort, null, null, false, noProxied, null, fullAuthentication);
-    		}
-    		proxy.process(request, response);
+    		getProxy(urlParameter).process(request, response);
     	}else{
     		serviceOld(request, response);
     	}
+    }
+    
+    /**
+     * Obtain a runtime proxy
+     * 
+     * @param urlParameter
+     * 
+     * @return proxyInstance
+     */
+    private ProxyUtils getProxy(String urlParameter){
+    	ProxyUtils proxy;
+    	if(this.proxies != null){
+			proxy = new ProxyUtils(this.proxies, fullAuthentication);
+		}else{
+			if(isProxyable(urlParameter)){
+				proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null, fullAuthentication);
+			}else{
+				proxy = new ProxyUtils(proxyUrl, proxyPort, null, null, proxyOn, noProxied, null, fullAuthentication);
+			}
+		}
+    	return proxy;
     }
 
     /**
