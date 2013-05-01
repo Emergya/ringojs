@@ -88,7 +88,7 @@ public class ProxyUtils {
 	 */
 	public ProxyUtils(String proxyUrl, int proxyPort, String proxyUser,
 			String proxyPassword, boolean proxyOn, String[] noProxied,
-			Map<String, String> authorizedUrls) {
+			Map<String, String> authorizedUrls, String[] fullAuthentication) {
 		super();
 		this.proxyUrl = proxyUrl;
 		this.proxyPort = proxyPort;
@@ -98,6 +98,8 @@ public class ProxyUtils {
 		this.noProxied = noProxied;
 		this.authorizedUrls = authorizedUrls != null ? authorizedUrls
 				: new HashMap<String, String>();
+		this.fullAuthentication = fullAuthentication != null ? fullAuthentication
+				: new String[0];
 	}
 
 	/**
@@ -154,30 +156,22 @@ public class ProxyUtils {
 			}
 
 			String requestURL = manageUrl(urlParameter, request, response);
-
-			// Create and execute method
-			HttpClient client = getHttpClient(requestURL);
-			HttpMethod method = getMethod(request, response, requestURL);
 			
-			// copy status
-			int status = client.executeMethod(method);
-			response.setStatus(status);
 			
-			// copy headers
-			for (Header header: method.getResponseHeaders()){
-				response.setHeader(header.getName(), header.getValue());
+			if(isFullAuthentication(requestURL)){
+				if (request.getMethod().toLowerCase().equals("put")) {
+					put(requestURL, request, os);
+				} else if (request.getMethod().toLowerCase().equals("post")) {
+					post(requestURL, request, os);
+				} else if (request.getMethod().toLowerCase().equals("get")) {
+					get(requestURL, request, os);
+				}else{
+					defaultProcess(requestURL, request, response, os);
+				}
+			}else{
+				defaultProcess(requestURL, request, response, os);
 			}
-
-			// Copy buffer
-			InputStream inputStreamProxyResponse = method
-					.getResponseBodyAsStream();
-			int read = 0;
-			byte[] bytes = new byte[1024];
-			while ((read = inputStreamProxyResponse.read(bytes)) != -1) {
-				os.write(bytes, 0, read);
-			}
-			inputStreamProxyResponse.close();
-			// EoF copy buffer
+			
 
 		} catch (Exception e) {
 			// log.error("getInputStream() failed", e);
@@ -190,6 +184,43 @@ public class ProxyUtils {
 			os.close();
 		}
 	}
+	
+	/**
+	 * Process direct put
+	 * 
+	 * @param url
+	 * @param request
+	 * @param os
+	 * 
+	 * @throws IOException
+	 */
+	protected void defaultProcess(String requestURL, HttpServletRequest request, HttpServletResponse response, OutputStream os)
+			throws Exception {
+		// Create and execute method
+		HttpClient client = getHttpClient(requestURL);
+		HttpMethod method = getMethod(request, response, requestURL);
+		
+		// copy status
+		int status = client.executeMethod(method);
+		response.setStatus(status);
+		
+		// copy headers
+		for (Header header: method.getResponseHeaders()){
+			response.setHeader(header.getName(), header.getValue());
+		}
+
+		// Copy buffer
+		InputStream inputStreamProxyResponse = method
+				.getResponseBodyAsStream();
+		int read = 0;
+		byte[] bytes = new byte[1024];
+		while ((read = inputStreamProxyResponse.read(bytes)) != -1) {
+			os.write(bytes, 0, read);
+		}
+		inputStreamProxyResponse.close();
+		// EoF copy buffer
+	}
+	
 
 	/**
 	 * Process direct put

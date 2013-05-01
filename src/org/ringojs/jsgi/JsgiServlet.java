@@ -56,6 +56,7 @@ public class JsgiServlet extends HttpServlet {
 	private String proxyPassword;
 	private boolean proxyOn;
 	private String [] noProxied = null; //Default null
+	private String [] fullAuthentication = null; //Default null
 	
 	/**
 	 * Environment parameters to load
@@ -81,6 +82,14 @@ public class JsgiServlet extends HttpServlet {
 		 * Geoserver port runtime parameter
 		 */
 		public static String NO_PROXIED = "app.proxy.geoserver.skiped";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String FULL_AUTH = "app.proxy.geoserver.fullAuthentication";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String AUTHORIZED_URLS = "app.proxy.geoserver.authorizedUrls";
 	}
 	
     /**
@@ -92,20 +101,20 @@ public class JsgiServlet extends HttpServlet {
 		this.proxyUser = System.getProperty(EnvironmentParameters.GEOSERVER_USER);
 		this.proxyPassword = System.getProperty(EnvironmentParameters.GEOSERVER_PASSWORD);
 		this.proxyPort = System.getProperty(EnvironmentParameters.GEOSERVER_PORT) != null ? Integer.decode(System.getProperty(EnvironmentParameters.GEOSERVER_PORT)) : 80; // default 80
+		this.noProxied = System.getProperty(EnvironmentParameters.NO_PROXIED) != null ? System.getProperty(EnvironmentParameters.NO_PROXIED).split(",") : null;
+		this.fullAuthentication = System.getProperty(EnvironmentParameters.FULL_AUTH) != null ? System.getProperty(EnvironmentParameters.FULL_AUTH).split(",") : null;
 
         System.out.println("proxyUrl is "+ this.proxyUrl);
         System.out.println("proxyUser is "+ this.proxyUser);
         System.out.println("proxyPassword is "+ this.proxyPassword);
         System.out.println("proxyPort is "+ this.proxyPort);
+        System.out.println("noProxied is "+ this.noProxied);
+        System.out.println("fullAuthentication is "+ this.fullAuthentication.toString());
 
 		if(this.proxyUrl != null){
 			this.proxyOn = true;
 		}else{
 			this.proxyOn = false;
-		}
-		String noProxiedString = System.getProperty(EnvironmentParameters.NO_PROXIED);
-		if(noProxiedString != null){
-			this.noProxied = noProxiedString.split(",");
 		}
 	}
 
@@ -122,9 +131,9 @@ public class JsgiServlet extends HttpServlet {
     		//System.out.println("Do proxy "+ urlParameter);
     		ProxyUtils proxy;
     		if(isProxyable(urlParameter)){
-    			proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null);
+    			proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null, fullAuthentication);
     		}else{
-    			proxy = new ProxyUtils(proxyUrl, proxyPort, null, null, false, noProxied, null);
+    			proxy = new ProxyUtils(proxyUrl, proxyPort, null, null, false, noProxied, null, fullAuthentication);
     		}
     		proxy.process(request, response);
     	}else{
@@ -153,7 +162,7 @@ public class JsgiServlet extends HttpServlet {
 							startsWith(anotherUrl)
 						|| urlParameter.
 							startsWith(anotherUrl.replaceAll(":", "%3A").replaceAll("/", "%2F")));
-		//System.out.println(urlParameter + (isProxyable ? "  is proxyable" : " is not proxyable"));
+		System.out.println(urlParameter + (isProxyable ? "  is proxyable" : " is not proxyable"));
 		return isProxyable;
 	}
 
