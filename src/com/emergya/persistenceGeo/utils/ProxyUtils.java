@@ -56,7 +56,7 @@ import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.params.HttpMethodParams;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.IOUtils;	
 
 /**
  * JsgiServlet extension to do direct proxy
@@ -75,6 +75,11 @@ public class ProxyUtils {
 	protected boolean proxyOn;
 	protected String[] noProxied;
 	protected String[] fullAuthentication;
+	
+	/**
+	 * Default charset to encode URLs
+	 */
+	public static final String DEFAULT_CHARSET = "UTF-8";
 
 	/**
 	 * Constructor of ProxyPass
@@ -157,14 +162,17 @@ public class ProxyUtils {
 
 			String requestURL = manageUrl(urlParameter, request, response);
 			
-			
 			if(isFullAuthentication(requestURL)){
+				String decodedURL = URLDecoder.decode(requestURL, DEFAULT_CHARSET);
+				StringBuffer getUrl = new StringBuffer(
+						decodedURL.replaceAll(" ", "%20"));
+				String requestURLEncoded = getUrl.toString();
 				if (request.getMethod().toLowerCase().equals("put")) {
-					put(requestURL, request, os);
+					put(requestURLEncoded, request, os);
 				} else if (request.getMethod().toLowerCase().equals("post")) {
-					post(requestURL, request, os);
+					post(requestURLEncoded, request, os);
 				} else if (request.getMethod().toLowerCase().equals("get")) {
-					get(requestURL, request, os);
+					get(requestURLEncoded, request, os);
 				}else{
 					defaultProcess(requestURL, request, response, os);
 				}
@@ -313,10 +321,17 @@ public class ProxyUtils {
 	protected HttpMethod getMethod(HttpServletRequest request,
 			HttpServletResponse response, String requestURL) throws Exception {
 		HttpMethod method;
+			
+		//String requestURLEncoded = URLEncoder.encode(requestURL, DEFAULT_CHARSET);
+		String decodedURL = URLDecoder.decode(requestURL, DEFAULT_CHARSET);
+		StringBuffer getUrl = new StringBuffer(
+				decodedURL.replaceAll(" ", "%20"));
+		String requestURLEncoded = getUrl.toString(); 
+
 		if (request.getMethod().toLowerCase().equals("get")) {
 			method = generateGetMethod(request, response, requestURL);
 		} else if (request.getMethod().toLowerCase().equals("post")) {
-			method = new PostMethod(requestURL);
+			method = new PostMethod(requestURLEncoded);
 			// Solo si es necesario en post
 			// ((PostMethod)method).setRequestBody();
 			((PostMethod) method)
@@ -325,7 +340,7 @@ public class ProxyUtils {
 		} else if (request.getMethod().toLowerCase().equals("put")) {
 			// put method may not be called
 			// method = generateGetMethod(request, response, requestURL);
-			method = new PutMethod(requestURL);
+			method = new PutMethod(requestURLEncoded);
 			((PutMethod) method).setRequestEntity(new InputStreamRequestEntity(
 					request.getInputStream(), request.getContentLength()));
 			// ((PutMethod) method).setRequestBody(request.getInputStream());
@@ -366,11 +381,12 @@ public class ProxyUtils {
 	private HttpMethod generateGetMethod(HttpServletRequest request,
 			HttpServletResponse response, String requestURL)
 			throws UnsupportedEncodingException {
-		String decodedURL = URLDecoder.decode(requestURL, "UTF-8");
+		String decodedURL = URLDecoder.decode(requestURL, DEFAULT_CHARSET);
 		StringBuffer getUrl = new StringBuffer(
 				decodedURL.replaceAll(" ", "%20"));
-		GetMethod method = new GetMethod(getUrl.toString());
-
+		GetMethod method = new GetMethod(getUrl.toString());			
+		//String requestURLEncoded = URLEncoder.encode(requestURL, DEFAULT_CHARSET);
+		//GetMethod method = new GetMethod(requestURLEncoded);			
 		return method;
 	}
 
@@ -416,7 +432,10 @@ public class ProxyUtils {
 	 * @return true if starts or false otherwise
 	 */
 	private boolean isFullAuthentication(String requestURL) {
-		return isIn(requestURL, fullAuthentication);
+		boolean isFull = isIn(requestURL, fullAuthentication);
+		//if(isFull)
+		//	System.out.println("Url '"+requestURL + "' is in fullAuthentication");
+		return isFull;
 	}
 
 	/**

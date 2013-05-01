@@ -109,7 +109,7 @@ public class JsgiServlet extends HttpServlet {
         System.out.println("proxyPassword is "+ this.proxyPassword);
         System.out.println("proxyPort is "+ this.proxyPort);
         System.out.println("noProxied is "+ this.noProxied);
-        System.out.println("fullAuthentication is "+ this.fullAuthentication.toString());
+        System.out.println("fullAuthentication is "+ this.fullAuthentication);
 
 		if(this.proxyUrl != null){
 			this.proxyOn = true;
@@ -151,9 +151,6 @@ public class JsgiServlet extends HttpServlet {
 	private boolean isProxyable(String urlParameter) {
 		
 		String anotherUrl = (proxyUrl.split("/geoserver")[0] + ":" + proxyPort + "/geoserver");
-//		System.out.println("urlParameter --> " + urlParameter);
-//		System.out.println("proxyUrl --> " + proxyUrl);
-//		System.out.println("anotherUrl --> " + anotherUrl);
 		boolean isProxyable = urlParameter != null 
 				&& (urlParameter.startsWith(proxyUrl)
 						|| urlParameter.
@@ -162,7 +159,7 @@ public class JsgiServlet extends HttpServlet {
 							startsWith(anotherUrl)
 						|| urlParameter.
 							startsWith(anotherUrl.replaceAll(":", "%3A").replaceAll("/", "%2F")));
-		System.out.println(urlParameter + (isProxyable ? "  is proxyable" : " is not proxyable"));
+		//System.out.println(urlParameter + (isProxyable ? "  is proxyable" : " is not proxyable"));
 		return isProxyable;
 	}
 
