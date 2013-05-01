@@ -40,6 +40,7 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import javax.servlet.ServletException;
@@ -75,11 +76,54 @@ public class ProxyUtils {
 	protected boolean proxyOn;
 	protected String[] noProxied;
 	protected String[] fullAuthentication;
+	private Map<String, ProxyCredentials> proxyCredentials;
+	
+	private class ProxyCredentials{
+		
+		public ProxyCredentials(String proxyUser, String proxyPassword, String url) {
+			super();
+			this.proxyUser = proxyUser;
+			this.proxyPassword = proxyPassword;
+			this.url = url;
+			System.out.println("ProxyCredentials: '" + this.proxyUser + "@" + this.proxyPassword +  " --> " + this.url + "'");
+		}
+		
+		protected String proxyUser;
+		protected String url;
+		protected String proxyPassword;
+	}
 	
 	/**
 	 * Default charset to encode URLs
 	 */
 	public static final String DEFAULT_CHARSET = "UTF-8";
+
+	public static final String SEPARATOR_PROXY_CREDENTIALS = ",";
+	public static final String SEPARATOR_PROXY_CREDENTIALS_USER_PASS = "@";
+	
+	public ProxyUtils(String proxyCredentials, String[] fullAuthentication) {
+		super();
+		System.out.println("Init ProxyUtils(" + proxyCredentials + "," + fullAuthentication + ")");
+		this.fullAuthentication = fullAuthentication != null ? fullAuthentication
+				: new String[0];
+		this.authorizedUrls = authorizedUrls != null ? authorizedUrls
+				: new HashMap<String, String>();
+		this.proxyCredentials = new HashMap<String, ProxyUtils.ProxyCredentials>();
+		if(proxyCredentials != null){
+			String [] proxyConfigs = proxyCredentials.split(SEPARATOR_PROXY_CREDENTIALS);
+			for(String proxyConfig: proxyConfigs){
+				// format is http://user@password:host
+				String user = proxyConfig.replace("http://", "").split("@")[0];
+				String password = proxyConfig.replace("http://" + user + "@", "").split(":")[0];
+				String host = "http://"  + proxyConfig.replace("http://" + user + "@" + password + ":", "");
+				ProxyCredentials proxyCredential = new ProxyCredentials(user, password, host);
+				this.proxyCredentials.put(host, proxyCredential);
+				this.proxyOn = true;
+			}
+		}else{
+			this.proxyOn = false;
+		}
+	}
 
 	/**
 	 * Constructor of ProxyPass
@@ -95,6 +139,7 @@ public class ProxyUtils {
 			String proxyPassword, boolean proxyOn, String[] noProxied,
 			Map<String, String> authorizedUrls, String[] fullAuthentication) {
 		super();
+		System.out.println("Init ProxyUtils(" + proxyUrl + ")");
 		this.proxyUrl = proxyUrl;
 		this.proxyPort = proxyPort;
 		this.proxyUser = proxyUser;
@@ -406,11 +451,30 @@ public class ProxyUtils {
 			if (isFullAuthentication(requestURL)) {
 				httpClient.getParams().setAuthenticationPreemptive(true);
 			}
-			httpClient.getState().setCredentials(AuthScope.ANY,
-					new UsernamePasswordCredentials(proxyUser, proxyPassword));
+			String host = getHost(requestURL);
+			if(host != null){
+				httpClient.getParams().setAuthenticationPreemptive(true);
+				httpClient.getState().setCredentials(AuthScope.ANY,
+						new UsernamePasswordCredentials(proxyCredentials.get(host).proxyUser, proxyCredentials.get(host).proxyPassword));
+			}else{
+				httpClient.getState().setCredentials(AuthScope.ANY,
+						new UsernamePasswordCredentials(proxyUser, proxyPassword));
+			}
 		}
 
 		return httpClient;
+	}
+	
+	private String getHost(String requestUrl){
+		Set<String> posibilities = this.proxyCredentials.keySet();
+		if (posibilities != null && posibilities.size() > 0) {
+			for (String posibilty : posibilities) {
+				if (requestUrl.startsWith(posibilty)) {
+					return posibilty;
+				}
+			}
+		}
+		return null;
 	}
 
 	/**
