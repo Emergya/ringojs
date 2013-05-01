@@ -488,7 +488,8 @@ public class ProxyUtils {
 				httpClient.getParams().setAuthenticationPreemptive(true);
 				httpClient.getState().setCredentials(AuthScope.ANY,
 						new UsernamePasswordCredentials(proxyCredentials.get(host).proxyUser, proxyCredentials.get(host).proxyPassword));
-			}else{
+			}else if(proxyUser != null && proxyPassword != null){
+				httpClient.getParams().setAuthenticationPreemptive(true);
 				httpClient.getState().setCredentials(AuthScope.ANY,
 						new UsernamePasswordCredentials(proxyUser, proxyPassword));
 			}
