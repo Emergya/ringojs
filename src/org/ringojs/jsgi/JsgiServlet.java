@@ -133,7 +133,8 @@ public class JsgiServlet extends HttpServlet {
     	
     	String urlParameter = request.getParameter("url");
     	
-    	if(urlParameter != null){
+    	if(urlParameter != null
+    			&& !isSkipped(urlParameter)){
     		//Do proxy
     		//System.out.println("Do proxy "+ urlParameter);
     		getProxy(urlParameter).process(request, response);
@@ -141,8 +142,8 @@ public class JsgiServlet extends HttpServlet {
     		serviceOld(request, response);
     	}
     }
-    
-    /**
+
+	/**
      * Obtain a runtime proxy
      * 
      * @param urlParameter
@@ -183,6 +184,21 @@ public class JsgiServlet extends HttpServlet {
 							startsWith(anotherUrl.replaceAll(":", "%3A").replaceAll("/", "%2F")));
 		//System.out.println(urlParameter + (isProxyable ? "  is proxyable" : " is not proxyable"));
 		return isProxyable;
+	}
+    
+    /**
+     * Skip proxy and pass to serviceOld
+     * 
+     * @param urlParameter
+     * 
+     * @return true if urlParameter start with one of this.noProxied
+     */
+    private boolean isSkipped(String urlParameter) {
+		if(this.noProxied != null){
+			return ProxyUtils.isIn(urlParameter, noProxied);
+		}else{
+			return false;
+		}
 	}
 
     String module;

@@ -542,7 +542,7 @@ public class ProxyUtils {
 	 * 
 	 * @return true if starts or false otherwise
 	 */
-	private boolean isIn(String string, String[] posibilities) {
+	public static boolean isIn(String string, String[] posibilities) {
 		if (posibilities != null && posibilities.length > 0) {
 			for (String posibilty : posibilities) {
 				if (string.startsWith(posibilty)) {
