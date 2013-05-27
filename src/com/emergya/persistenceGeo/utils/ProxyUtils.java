@@ -37,6 +37,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -458,12 +459,26 @@ public class ProxyUtils {
 	private HttpMethod generateGetMethod(HttpServletRequest request,
 			HttpServletResponse response, String requestURL)
 			throws UnsupportedEncodingException {
-		String decodedURL = URLDecoder.decode(requestURL, DEFAULT_CHARSET);
-		StringBuffer getUrl = new StringBuffer(
-				decodedURL.replaceAll(" ", "%20"));
-		GetMethod method = new GetMethod(getUrl.toString());			
 		//String requestURLEncoded = URLEncoder.encode(requestURL, DEFAULT_CHARSET);
-		//GetMethod method = new GetMethod(requestURLEncoded);			
+		//GetMethod method = new GetMethod(requestURLEncoded);	
+		
+		// Copy all parameters!!
+		String getUrlString = requestURL.toString();	
+		for (Object p : request.getParameterMap().keySet()) {
+			if (!"url".equals(p)){
+				String pValue = (((String []) request.getParameterMap().get(p))[0]);
+				String pairEncoded = p + "=" + URLEncoder.encode(pValue, DEFAULT_CHARSET);
+				if(getUrlString.contains("?")){
+					getUrlString += "&" + pairEncoded;
+				}else{
+					getUrlString += "?" + pairEncoded;
+				}
+			}
+		}
+
+		System.out.println("Get method to '" + getUrlString + "'");	
+		GetMethod method = new GetMethod(getUrlString);
+		
 		return method;
 	}
 
