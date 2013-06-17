@@ -58,7 +58,7 @@ import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.PutMethod;
 import org.apache.commons.httpclient.params.HttpMethodParams;
-import org.apache.commons.io.IOUtils;	
+import org.apache.commons.io.IOUtils;
 
 /**
  * JsgiServlet extension to do direct proxy
@@ -67,6 +67,10 @@ import org.apache.commons.io.IOUtils;
  * 
  */
 public class ProxyUtils {
+
+	private static final String DOWNLOAD_PARAMETER_KEY = "download";
+
+	private static final String FILENAME_PARAMETER_KEY = "filename";
 
 	private Map<String, String> authorizedUrls;
 
@@ -78,39 +82,41 @@ public class ProxyUtils {
 	protected String[] noProxied;
 	protected String[] fullAuthentication;
 	private Map<String, ProxyCredentials> proxyCredentials;
-	
+
 	/**
 	 * Credentials to make a request
 	 * 
 	 * @author <a href="mailto:adiaz@emergya.com">adiaz</a>
 	 * 
 	 */
-	private class ProxyCredentials{
-		
-		public ProxyCredentials(String proxyUser, String proxyPassword, String url) {
+	private class ProxyCredentials {
+
+		public ProxyCredentials(String proxyUser, String proxyPassword,
+				String url) {
 			super();
 			this.proxyUser = proxyUser;
 			this.proxyPassword = proxyPassword;
 			this.url = url;
-			System.out.println("ProxyCredentials: '" + this.proxyUser + "@" + this.proxyPassword +  " --> " + this.url + "'");
+			System.out.println("ProxyCredentials: '" + this.proxyUser + "@"
+					+ this.proxyPassword + " --> " + this.url + "'");
 		}
-		
+
 		/**
-		 * User to use 
+		 * User to use
 		 */
 		protected String proxyUser;
-		
+
 		/**
 		 * Url to manage by auth
 		 */
 		protected String url;
-		
+
 		/**
 		 * Password to use
 		 */
 		protected String proxyPassword;
 	}
-	
+
 	/**
 	 * Default charset to encode URLs
 	 */
@@ -118,33 +124,43 @@ public class ProxyUtils {
 
 	public static final String SEPARATOR_PROXY_CREDENTIALS = ",";
 	public static final String SEPARATOR_PROXY_CREDENTIALS_USER_PASS = "@";
-	
+
 	/**
 	 * Generate a Proxy with credentials and full authentication urls
 	 * 
-	 * @param proxyCredentials Servers to be proxied with user and password in a string with this format: 'http://user1@password1:host1,http://user2@password2:host2'  
-	 * @param fullAuthentication Urls to be proxied with full authentication
+	 * @param proxyCredentials
+	 *            Servers to be proxied with user and password in a string with
+	 *            this format:
+	 *            'http://user1@password1:host1,http://user2@password2:host2'
+	 * @param fullAuthentication
+	 *            Urls to be proxied with full authentication
 	 */
 	public ProxyUtils(String proxyCredentials, String[] fullAuthentication) {
 		super();
-		System.out.println("Init ProxyUtils(" + proxyCredentials + "," + fullAuthentication + ")");
+		System.out.println("Init ProxyUtils(" + proxyCredentials + ","
+				+ fullAuthentication + ")");
 		this.fullAuthentication = fullAuthentication != null ? fullAuthentication
 				: new String[0];
 		this.authorizedUrls = authorizedUrls != null ? authorizedUrls
 				: new HashMap<String, String>();
 		this.proxyCredentials = new HashMap<String, ProxyUtils.ProxyCredentials>();
-		if(proxyCredentials != null){
-			String [] proxyConfigs = proxyCredentials.split(SEPARATOR_PROXY_CREDENTIALS);
-			for(String proxyConfig: proxyConfigs){
+		if (proxyCredentials != null) {
+			String[] proxyConfigs = proxyCredentials
+					.split(SEPARATOR_PROXY_CREDENTIALS);
+			for (String proxyConfig : proxyConfigs) {
 				// format is http://user@password:host
 				String user = proxyConfig.replace("http://", "").split("@")[0];
-				String password = proxyConfig.replace("http://" + user + "@", "").split(":")[0];
-				String host = "http://"  + proxyConfig.replace("http://" + user + "@" + password + ":", "");
-				ProxyCredentials proxyCredential = new ProxyCredentials(user, password, host);
+				String password = proxyConfig.replace("http://" + user + "@",
+						"").split(":")[0];
+				String host = "http://"
+						+ proxyConfig.replace("http://" + user + "@" + password
+								+ ":", "");
+				ProxyCredentials proxyCredential = new ProxyCredentials(user,
+						password, host);
 				this.proxyCredentials.put(host, proxyCredential);
 				this.proxyOn = true;
 			}
-		}else{
+		} else {
 			this.proxyOn = false;
 		}
 	}
@@ -232,15 +248,17 @@ public class ProxyUtils {
 			}
 
 			String requestURL = manageUrl(urlParameter, request, response);
-			
+
 			String host = getHost(requestURL);
-			ProxyCredentials credential = host != null ? this.proxyCredentials.get(host) : 
-				new ProxyCredentials(proxyUser, proxyPassword, requestURL);
-			
-			if(isFullAuthentication(requestURL)){
-				String decodedURL = URLDecoder.decode(requestURL, DEFAULT_CHARSET);
-				StringBuffer getUrl = new StringBuffer(
-						decodedURL.replaceAll(" ", "%20"));
+			ProxyCredentials credential = host != null ? this.proxyCredentials
+					.get(host) : new ProxyCredentials(proxyUser, proxyPassword,
+					requestURL);
+
+			if (isFullAuthentication(requestURL)) {
+				String decodedURL = URLDecoder.decode(requestURL,
+						DEFAULT_CHARSET);
+				StringBuffer getUrl = new StringBuffer(decodedURL.replaceAll(
+						" ", "%20"));
 				String requestURLEncoded = getUrl.toString();
 				if (request.getMethod().toLowerCase().equals("put")) {
 					put(requestURLEncoded, request, os, credential);
@@ -248,13 +266,12 @@ public class ProxyUtils {
 					post(requestURLEncoded, request, os, credential);
 				} else if (request.getMethod().toLowerCase().equals("get")) {
 					get(requestURLEncoded, request, os, credential);
-				}else{
+				} else {
 					defaultProcess(requestURL, request, response, os);
 				}
-			}else{
+			} else {
 				defaultProcess(requestURL, request, response, os);
 			}
-			
 
 		} catch (Exception e) {
 			// log.error("getInputStream() failed", e);
@@ -267,7 +284,7 @@ public class ProxyUtils {
 			os.close();
 		}
 	}
-	
+
 	/**
 	 * Process direct put
 	 * 
@@ -277,24 +294,47 @@ public class ProxyUtils {
 	 * 
 	 * @throws IOException
 	 */
-	protected void defaultProcess(String requestURL, HttpServletRequest request, HttpServletResponse response, OutputStream os)
-			throws Exception {
+	protected void defaultProcess(String requestURL,
+			HttpServletRequest request, HttpServletResponse response,
+			OutputStream os) throws Exception {
+		// Check if download and filename parameters exists
+		String decodedURL = URLDecoder.decode(requestURL, DEFAULT_CHARSET);
+		boolean addContentDispositionHeader = false;
+		Map<String, String> params = new HashMap<String, String>();
+		if (decodedURL.indexOf("?") > -1) {
+			String paramaters = decodedURL
+					.substring(decodedURL.indexOf("?") + 1);
+			params = parseParam(paramaters);
+		}
+		
+		if (params.containsKey(DOWNLOAD_PARAMETER_KEY) && params.containsKey(FILENAME_PARAMETER_KEY)) {
+			addContentDispositionHeader = true;
+		}
+
 		// Create and execute method
 		HttpClient client = getHttpClient(requestURL);
 		HttpMethod method = getMethod(request, response, requestURL);
-		
+
 		// copy status
 		int status = client.executeMethod(method);
 		response.setStatus(status);
-		
+
 		// copy headers
-		for (Header header: method.getResponseHeaders()){
+		for (Header header : method.getResponseHeaders()) {
 			response.setHeader(header.getName(), header.getValue());
+
+			// if there is a Content-Disposition header use the received from upstream server 
+			if (header.getName().equalsIgnoreCase("content-disposition")) {
+				addContentDispositionHeader = false;
+			}
+		}
+		
+		if (addContentDispositionHeader) {
+			response.setHeader("Content-Disposition", "attachment; filename=" + params.get(FILENAME_PARAMETER_KEY));
 		}
 
 		// Copy buffer
-		InputStream inputStreamProxyResponse = method
-				.getResponseBodyAsStream();
+		InputStream inputStreamProxyResponse = method.getResponseBodyAsStream();
 		int read = 0;
 		byte[] bytes = new byte[1024];
 		while ((read = inputStreamProxyResponse.read(bytes)) != -1) {
@@ -303,7 +343,22 @@ public class ProxyUtils {
 		inputStreamProxyResponse.close();
 		// EoF copy buffer
 	}
-	
+
+	// parse the URL parameter
+	private Map<String, String> parseParam(String parameters) {
+		Map<String, String> paramValues = new HashMap<String, String>();
+
+		StringTokenizer paramGroup = new StringTokenizer(parameters, "&");
+
+		while (paramGroup.hasMoreTokens()) {
+
+			StringTokenizer value = new StringTokenizer(paramGroup.nextToken(),
+					"=");
+			paramValues.put(value.nextToken().toLowerCase(), value.nextToken());
+
+		}
+		return paramValues;
+	}
 
 	/**
 	 * Process direct put
@@ -315,20 +370,22 @@ public class ProxyUtils {
 	 * 
 	 * @throws IOException
 	 */
-	protected void put(String url, HttpServletRequest request, OutputStream os, ProxyCredentials credential)
-			throws IOException {
+	protected void put(String url, HttpServletRequest request, OutputStream os,
+			ProxyCredentials credential) throws IOException {
 		StringWriter writer = new StringWriter();
 		Reader data = request.getReader();
 		IOUtils.copy(data, writer);
 		String xml = writer.toString();
-		//System.out.println("Putting "+ xml);
+		// System.out.println("Putting "+ xml);
 		if (hasText(xml)) {
 			String stringResponse;
-			if(request.getContentType().equals(GeoServerRESTPublisher.Format.XML)){
-				stringResponse = HTTPUtils.putXml(url, xml, credential.proxyUser,
-						credential.proxyPassword);
-			}else{
-				stringResponse = HTTPUtils.put(url, xml, request.getContentType(), credential.proxyUser,
+			if (request.getContentType().equals(
+					GeoServerRESTPublisher.Format.XML)) {
+				stringResponse = HTTPUtils.putXml(url, xml,
+						credential.proxyUser, credential.proxyPassword);
+			} else {
+				stringResponse = HTTPUtils.put(url, xml,
+						request.getContentType(), credential.proxyUser,
 						credential.proxyPassword);
 			}
 			os.write(stringResponse.getBytes());
@@ -347,20 +404,22 @@ public class ProxyUtils {
 	 * 
 	 * @throws IOException
 	 */
-	protected void post(String url, HttpServletRequest request, OutputStream os, ProxyCredentials credential)
-			throws IOException {
+	protected void post(String url, HttpServletRequest request,
+			OutputStream os, ProxyCredentials credential) throws IOException {
 		StringWriter writer = new StringWriter();
 		Reader data = request.getReader();
 		IOUtils.copy(data, writer);
 		String xml = writer.toString();
-		//System.out.println("Posting "+ xml);
+		// System.out.println("Posting "+ xml);
 		if (hasText(xml)) {
 			String stringResponse;
-			if(request.getContentType().equals(GeoServerRESTPublisher.Format.XML)){
-				stringResponse = HTTPUtils.postXml(url, xml, credential.proxyUser,
-						credential.proxyPassword);
-			}else{
-				stringResponse = HTTPUtils.post(url, xml, request.getContentType(), credential.proxyUser,
+			if (request.getContentType().equals(
+					GeoServerRESTPublisher.Format.XML)) {
+				stringResponse = HTTPUtils.postXml(url, xml,
+						credential.proxyUser, credential.proxyPassword);
+			} else {
+				stringResponse = HTTPUtils.post(url, xml,
+						request.getContentType(), credential.proxyUser,
 						credential.proxyPassword);
 			}
 			os.write(stringResponse.getBytes());
@@ -379,9 +438,10 @@ public class ProxyUtils {
 	 * 
 	 * @throws IOException
 	 */
-	protected void get(String url, HttpServletRequest request, OutputStream os, ProxyCredentials credential)
-			throws IOException {
-		String stringResponse = HTTPUtils.get(url, credential.proxyUser, credential.proxyPassword);
+	protected void get(String url, HttpServletRequest request, OutputStream os,
+			ProxyCredentials credential) throws IOException {
+		String stringResponse = HTTPUtils.get(url, credential.proxyUser,
+				credential.proxyPassword);
 		os.write(stringResponse.getBytes());
 	}
 
@@ -399,12 +459,13 @@ public class ProxyUtils {
 	protected HttpMethod getMethod(HttpServletRequest request,
 			HttpServletResponse response, String requestURL) throws Exception {
 		HttpMethod method;
-			
-		//String requestURLEncoded = URLEncoder.encode(requestURL, DEFAULT_CHARSET);
+
+		// String requestURLEncoded = URLEncoder.encode(requestURL,
+		// DEFAULT_CHARSET);
 		String decodedURL = URLDecoder.decode(requestURL, DEFAULT_CHARSET);
 		StringBuffer getUrl = new StringBuffer(
 				decodedURL.replaceAll(" ", "%20"));
-		String requestURLEncoded = getUrl.toString(); 
+		String requestURLEncoded = getUrl.toString();
 
 		if (request.getMethod().toLowerCase().equals("get")) {
 			method = generateGetMethod(request, response, requestURL);
@@ -459,26 +520,28 @@ public class ProxyUtils {
 	private HttpMethod generateGetMethod(HttpServletRequest request,
 			HttpServletResponse response, String requestURL)
 			throws UnsupportedEncodingException {
-		//String requestURLEncoded = URLEncoder.encode(requestURL, DEFAULT_CHARSET);
-		//GetMethod method = new GetMethod(requestURLEncoded);	
-		
+		// String requestURLEncoded = URLEncoder.encode(requestURL,
+		// DEFAULT_CHARSET);
+		// GetMethod method = new GetMethod(requestURLEncoded);
+
 		// Copy all parameters!!
-		String getUrlString = requestURL.toString();	
+		String getUrlString = requestURL.toString();
 		for (Object p : request.getParameterMap().keySet()) {
-			if (!"url".equals(p)){
-				String pValue = (((String []) request.getParameterMap().get(p))[0]);
-				String pairEncoded = p + "=" + URLEncoder.encode(pValue, DEFAULT_CHARSET);
-				if(getUrlString.contains("?")){
+			if (!"url".equals(p)) {
+				String pValue = (((String[]) request.getParameterMap().get(p))[0]);
+				String pairEncoded = p + "="
+						+ URLEncoder.encode(pValue, DEFAULT_CHARSET);
+				if (getUrlString.contains("?")) {
 					getUrlString += "&" + pairEncoded;
-				}else{
+				} else {
 					getUrlString += "?" + pairEncoded;
 				}
 			}
 		}
 
-		System.out.println("Get method to '" + getUrlString + "'");	
+		System.out.println("Get method to '" + getUrlString + "'");
 		GetMethod method = new GetMethod(getUrlString);
-		
+
 		return method;
 	}
 
@@ -499,21 +562,26 @@ public class ProxyUtils {
 				httpClient.getParams().setAuthenticationPreemptive(true);
 			}
 			String host = getHost(requestURL);
-			if(host != null){
+			if (host != null) {
 				httpClient.getParams().setAuthenticationPreemptive(true);
-				httpClient.getState().setCredentials(AuthScope.ANY,
-						new UsernamePasswordCredentials(proxyCredentials.get(host).proxyUser, proxyCredentials.get(host).proxyPassword));
-			}else if(proxyUser != null && proxyPassword != null){
+				httpClient.getState().setCredentials(
+						AuthScope.ANY,
+						new UsernamePasswordCredentials(proxyCredentials
+								.get(host).proxyUser, proxyCredentials
+								.get(host).proxyPassword));
+			} else if (proxyUser != null && proxyPassword != null) {
 				httpClient.getParams().setAuthenticationPreemptive(true);
-				httpClient.getState().setCredentials(AuthScope.ANY,
-						new UsernamePasswordCredentials(proxyUser, proxyPassword));
+				httpClient.getState().setCredentials(
+						AuthScope.ANY,
+						new UsernamePasswordCredentials(proxyUser,
+								proxyPassword));
 			}
 		}
 
 		return httpClient;
 	}
-	
-	private String getHost(String requestUrl){
+
+	private String getHost(String requestUrl) {
 		Set<String> posibilities = this.proxyCredentials.keySet();
 		if (posibilities != null && posibilities.size() > 0) {
 			for (String posibilty : posibilities) {
@@ -545,8 +613,9 @@ public class ProxyUtils {
 	 */
 	private boolean isFullAuthentication(String requestURL) {
 		boolean isFull = isIn(requestURL, fullAuthentication);
-		//if(isFull)
-		//	System.out.println("Url '"+requestURL + "' is in fullAuthentication");
+		// if(isFull)
+		// System.out.println("Url '"+requestURL +
+		// "' is in fullAuthentication");
 		return isFull;
 	}
 
