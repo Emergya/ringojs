@@ -354,7 +354,13 @@ public class ProxyUtils {
 
 			StringTokenizer value = new StringTokenizer(paramGroup.nextToken(),
 					"=");
-			paramValues.put(value.nextToken().toLowerCase(), value.nextToken());
+
+			String paramName = value.nextToken();
+			if(value.hasMoreTokens()) {
+				paramValues.put(paramName.toLowerCase(), value.nextToken());	
+			}
+
+			
 
 		}
 		return paramValues;
