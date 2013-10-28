@@ -321,7 +321,19 @@ public class ProxyUtils {
 
 		// copy headers
 		for (Header header : method.getResponseHeaders()) {
+
+			//System.out.println(String.format("Response Header '%s': %s", header.getName(), header.getValue()));
+
+			if(header.getName().equals("Transfer-Encoding") && header.getValue().equals("chunked")) {
+				// #87258 We need to skip received chunked transfer headres because we write the output at once, 
+				// so the buffer contains more data than the 
+				System.out.println("Chunked Header Skipped");
+				continue;	
+			}
+
 			response.setHeader(header.getName(), header.getValue());
+
+
 
 			// if there is a Content-Disposition header use the received from upstream server 
 			if (header.getName().equalsIgnoreCase("content-disposition")) {
