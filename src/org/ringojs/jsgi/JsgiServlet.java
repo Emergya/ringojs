@@ -29,6 +29,8 @@ import org.ringojs.engine.RhinoEngine;
 import org.ringojs.util.StringUtils;
 import org.mozilla.javascript.Callable;
 
+import com.emergya.persistenceGeo.utils.ProxyUtils;
+
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -41,6 +43,163 @@ import java.util.Arrays;
 import java.util.List;
 
 public class JsgiServlet extends HttpServlet {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	
+	private String proxyUrl;
+	private int proxyPort;
+	private String proxyUser;
+	private String proxyPassword;
+	private boolean proxyOn;
+	private String [] noProxied = null; //Default null
+	private String [] fullAuthentication = null; //Default null
+	private String proxies = null; //Default null
+	
+	/**
+	 * Environment parameters to load
+	 */
+	public static class EnvironmentParameters{
+		/**
+		 * Geoserver url runtime parameter
+		 */
+		public static String GEOSERVER_URL = "app.proxy.geoserver";
+		/**
+		 * Geoserver user runtime parameter
+		 */
+		public static String GEOSERVER_USER = "app.proxy.geoserver.username";
+		/**
+		 * Geoserver password runtime parameter
+		 */
+		public static String GEOSERVER_PASSWORD = "app.proxy.geoserver.password";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String GEOSERVER_PORT = "app.proxy.geoserver.port";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String NO_PROXIED = "app.proxy.geoserver.skiped";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String FULL_AUTH = "app.proxy.geoserver.fullAuthentication";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String AUTHORIZED_URLS = "app.proxy.geoserver.authorizedUrls";
+		/**
+		 * Geoserver port runtime parameter
+		 */
+		public static String CONFIG_PROXIES = "app.proxy.geoserver.proxies";
+	}
+	
+    /**
+     * Servlet init. Reads proxy configuration
+     */
+	public void init() throws ServletException {
+		super.init();
+		this.proxyUrl = System.getProperty(EnvironmentParameters.GEOSERVER_URL);
+		this.proxyUser = System.getProperty(EnvironmentParameters.GEOSERVER_USER);
+		this.proxyPassword = System.getProperty(EnvironmentParameters.GEOSERVER_PASSWORD);
+		this.proxyPort = System.getProperty(EnvironmentParameters.GEOSERVER_PORT) != null ? Integer.decode(System.getProperty(EnvironmentParameters.GEOSERVER_PORT)) : 80; // default 80
+		this.noProxied = System.getProperty(EnvironmentParameters.NO_PROXIED) != null ? System.getProperty(EnvironmentParameters.NO_PROXIED).split(",") : null;
+		this.fullAuthentication = System.getProperty(EnvironmentParameters.FULL_AUTH) != null ? System.getProperty(EnvironmentParameters.FULL_AUTH).split(",") : null;
+		this.proxies = System.getProperty(EnvironmentParameters.CONFIG_PROXIES);
+
+        System.out.println("proxyUrl is "+ this.proxyUrl);
+        System.out.println("proxyUser is "+ this.proxyUser);
+        System.out.println("proxyPassword is "+ this.proxyPassword);
+        System.out.println("proxyPort is "+ this.proxyPort);
+        System.out.println("noProxied is "+ this.noProxied);
+        System.out.println("fullAuthentication is "+ this.fullAuthentication);
+        System.out.println("proxies are "+ this.proxies);
+
+		if(this.proxyUrl != null || this.proxies != null){
+			this.proxyOn = true;
+		}else{
+			this.proxyOn = false;
+		}
+	}
+
+	/**
+     * Service a request.
+     */
+    protected void service(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+    	
+    	String urlParameter = request.getParameter("url");
+    	
+    	if(urlParameter != null
+    			&& !isSkipped(urlParameter)){
+    		//Do proxy
+    		//System.out.println("Do proxy "+ urlParameter);
+    		getProxy(urlParameter).process(request, response);
+    	}else{
+    		serviceOld(request, response);
+    	}
+    }
+
+	/**
+     * Obtain a runtime proxy
+     * 
+     * @param urlParameter
+     * 
+     * @return proxyInstance
+     */
+    private ProxyUtils getProxy(String urlParameter){
+    	ProxyUtils proxy;
+    	if(this.proxies != null){
+			proxy = new ProxyUtils(this.proxies, fullAuthentication);
+		}else{
+			if(isProxyable(urlParameter)){
+				proxy = new ProxyUtils(proxyUrl, proxyPort, proxyUser, proxyPassword, proxyOn, noProxied, null, fullAuthentication);
+			}else{
+				proxy = new ProxyUtils(proxyUrl, proxyPort, null, null, proxyOn, noProxied, null, fullAuthentication);
+			}
+		}
+    	return proxy;
+    }
+
+    /**
+     * Compare with proxy configuration
+     * 
+     * @param urlParameter
+     * 
+     * @return true if urlParameter is proxyable or false otherwise
+     */
+	private boolean isProxyable(String urlParameter) {
+		
+		String anotherUrl = (proxyUrl.split("/geoserver")[0] + ":" + proxyPort + "/geoserver");
+		boolean isProxyable = urlParameter != null 
+				&& (urlParameter.startsWith(proxyUrl)
+						|| urlParameter.
+							startsWith(proxyUrl.replaceAll(":", "%3A").replaceAll("/", "%2F"))
+						|| urlParameter.
+							startsWith(anotherUrl)
+						|| urlParameter.
+							startsWith(anotherUrl.replaceAll(":", "%3A").replaceAll("/", "%2F")));
+		//System.out.println(urlParameter + (isProxyable ? "  is proxyable" : " is not proxyable"));
+		return isProxyable;
+	}
+    
+    /**
+     * Skip proxy and pass to serviceOld
+     * 
+     * @param urlParameter
+     * 
+     * @return true if urlParameter start with one of this.noProxied
+     */
+    private boolean isSkipped(String urlParameter) {
+		if(this.noProxied != null){
+			return ProxyUtils.isIn(urlParameter, noProxied);
+		}else{
+			return false;
+		}
+	}
 
     String module;
     Object function;
@@ -119,9 +278,9 @@ public class JsgiServlet extends HttpServlet {
         }
     }
 
-    @Override
-    protected void service(HttpServletRequest request, HttpServletResponse response)
+    protected void serviceOld(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+    	
         try {
             if (hasContinuation && ContinuationSupport
                     .getContinuation(request).isExpired()) {

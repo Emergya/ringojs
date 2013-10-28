@@ -319,7 +319,7 @@ exports.testDiff = function() {
     assert.equal(dates.diff(a, b, "quarter"), 305);
     assert.equal(dates.diff(a, b, "month"), 913);
     assert.equal(dates.diff(a, b, "week"), 3970);
-    assert.equal(dates.diff(a, b, "day"), 27793);
+    assert.equal(dates.diff(a, b, "day"), 27792);
 
     // again Einstein, now with time diff
     b = new Date(1955, 3, 18, 20, 39, 10, 53);
